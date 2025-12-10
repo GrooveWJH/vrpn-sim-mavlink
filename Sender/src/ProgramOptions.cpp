@@ -7,8 +7,24 @@
 namespace vrpn_sim {
 namespace {
 
+const char* program_name(const char* exe) {
+    if (exe == nullptr) {
+        return "fake_vrpn_uav_server";
+    }
+    const char* slash = std::strrchr(exe, '/');
+    const char* backslash = std::strrchr(exe, '\\');
+    const char* base = exe;
+    if (slash && (!backslash || slash > backslash)) {
+        base = slash + 1;
+    } else if (backslash) {
+        base = backslash + 1;
+    }
+    return base;
+}
+
 void print_help(const char* exe) {
-    std::printf("Usage: %s [options]\n", exe);
+    const char* prog = program_name(exe);
+    std::printf("Usage: %s [options]\n", prog);
     std::printf("  -b, --bind <addr>          VRPN bind string (default :3883)\n");
     std::printf("  -n, --num-trackers <N>     Number of trackers to simulate (default 32)\n");
     std::printf("  -r, --rate <Hz>            Publish rate (default 50Hz)\n");
@@ -23,9 +39,9 @@ void print_help(const char* exe) {
     std::printf("      --auto-restart         Retry binding after errors (default: disabled)\n");
     std::printf("      --restart-delay <s>    Delay before auto-restart (default 1s)\n");
     std::printf("\nExamples:\n");
-    std::printf("  %s --bind :3883 --num-trackers 32 --rate 50\n", exe);
-    std::printf("  %s --bind :4000 --auto-restart --restart-delay 2.0\n", exe);
-    std::printf("  %s --bind :3883 -q --status-interval 10 --status-mode inline\n", exe);
+    std::printf("  %s --bind :3883 --num-trackers 32 --rate 50\n", prog);
+    std::printf("  %s --bind :4000 --auto-restart --restart-delay 2.0\n", prog);
+    std::printf("  %s --bind :3883 -q --status-interval 10 --status-mode inline\n", prog);
 }
 
 }  // namespace

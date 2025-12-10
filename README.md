@@ -8,7 +8,7 @@ Simulate a fleet of VRPN trackers on one computer (Sender) and forward individua
 ```
 .
 ├── Sender     # C++17 VRPN server (fake trackers)
-└── Receiver   # Python VRPN → MAVLink bridge
+└── Receiver   # C++ VRPN → MAVLink bridge (serial/UDP)
 ```
 
 ## Prerequisites
@@ -17,15 +17,13 @@ Simulate a fleet of VRPN trackers on one computer (Sender) and forward individua
 
 - Xcode Command Line Tools (`xcode-select --install`)
 - CMake ≥ 3.15
-- Homebrew packages: `brew install vrpn cmake` (installs VRPN headers/libs for both C++ and Python bindings)
-- Python 3.10+ with `pip`
+- Homebrew packages: `brew install vrpn cmake`
 
 **Linux (Ubuntu / Debian)**
 
 - Build toolchain: `sudo apt install build-essential cmake ninja-build`
 - VRPN development package: `sudo apt install libvrpn-dev`
-- Python tooling: `sudo apt install python3 python3-venv python3-pip`
-- For other distros, install VRPN from source or the package manager and ensure headers/libs are visible to CMake and Python.
+- For other distros, install VRPN from source or the package manager and ensure headers/libs are visible to CMake.
 
 ## 1. Build & run the VRPN sender
 
@@ -46,21 +44,34 @@ The simulator publishes trackers `uav0` … `uav31`, all sharing the same connec
 - Pass `--auto-restart --restart-delay 1.5` if you want the sender to keep retrying when connections drop unexpectedly.
 - Run `./build/fake_vrpn_uav_server --help` to see all CLI flags plus example invocations.
 
-## 2. Start the VRPN → MAVLink bridge
+## 2. Build & run the VRPN → MAVLink bridge (Receiver)
 
 ```bash
 cd Receiver
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python vrpn_to_mavlink_bridge.py uav0 127.0.0.1 udpout:127.0.0.1:14550 udp --no-heartbeat
+cmake -B build -S .
+cmake --build build
+./build/vrpn_receiver \
+    --tracker uav0 \
+    --host 127.0.0.1 \
+    --port 3883 \
+    --link serial \
+    --device /dev/tty.usbmodem01 \
+    --baud 57600
+    --log-poses
 ```
 
 - Replace `uav0` with the tracker you want to forward.
-- Replace `127.0.0.1` with the VRPN server IP if Sender runs elsewhere.
-- Set `mav_endpoint` to a serial device (e.g. `/dev/tty.usbserial-0001` on macOS or `/dev/ttyUSB0` on Linux) and choose `serial` to push data directly to a flight controller, or use `udpout:<host>:<port>` with `udp` for SITL/QGC testing.
+- Prefer IPv4 addresses for `--host` (`localhost` is normalized to `127.0.0.1`).
+- Use `--link udp --udp-target <host>:<port>` to emit via UDP instead of serial.
+- Adjust `--sysid/--compid` if your autopilot expects different MAVLink IDs.
 
-The script converts the VRPN quaternions to Euler angles and sends `VISION_POSITION_ESTIMATE` at the requested rate (default 50 Hz).
+The receiver connects to the specified VRPN tracker and transmits `VISION_POSITION_ESTIMATE` at the requested rate (default 50 Hz).
+
+### MAVLink transport to the flight controller
+
+- **Serial/UART (default)** – Specify `--link serial` together with the host serial device exposed by your FCU (for PX4/ArduPilot this is typically a TELEM/COMPANION port cabled to your computer via USB-UART). The binary data are emitted straight onto that UART, so whatever is listening on the other end (PX4 `TELEM2`, ArduPilot `SERIALx`, companion SBC, etc.) receives `VISION_POSITION_ESTIMATE` frames without additional daemons.
+- **UDP** – Useful for SITL or QGroundControl; switch to `--link udp --udp-target <ip>:<port>` to broadcast over the network.
+- The bridge never waits for MAVLink ACKs; it continuously pushes external-vision poses one-way to the FCU. Make sure your autopilot has vision fusion enabled so it consumes those poses as soon as they arrive on the configured telemetry interface.
 
 ## 3. Verify in QGroundControl / PX4 / ArduPilot
 
@@ -70,5 +81,5 @@ The script converts the VRPN quaternions to Euler angles and sends `VISION_POSIT
 ## Development notes
 
 - The Sender uses `vrpn_Tracker_Server` mocks with deterministic circular motion so downstream filters receive smooth data.
-- The Receiver keeps the most recent pose from VRPN and throttles MAVLink transmission with a configurable loop rate.
+- The Receiver is a native C++17 application that links directly against VRPN and the MAVLink C headers for deterministic latency.
 - Both components are intentionally dependency-light to make it easy to port them to Linux or Windows hosts.

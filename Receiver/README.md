@@ -1,37 +1,75 @@
-# Receiver (VRPN → MAVLink bridge)
+# Receiver (C++ VRPN → MAVLink bridge)
 
-This Python utility connects to a VRPN tracker (e.g. `uav0@localhost:3883`) and forwards the pose as `VISION_POSITION_ESTIMATE` to any MAVLink endpoint (serial or UDP).
+This directory now contains a C++17 application that listens to a VRPN tracker and republishes poses as MAVLink `VISION_POSITION_ESTIMATE` messages over either a serial device or UDP socket.
 
-## Setup
+## Build
 
 ```bash
 cd Receiver
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+cmake -B build -S .
+cmake --build build
 ```
 
-> The `vrpn` Python module is a thin wrapper over the VRPN C library. Install the native library first (`brew install vrpn` on macOS, `sudo apt install libvrpn-dev` on Ubuntu/Debian) before running `pip install vrpn`.
+Requirements:
 
-## Usage
+- VRPN headers/libraries available on your system (`brew install vrpn` or `sudo apt install libvrpn-dev`).
+- A C++17 compiler and CMake ≥ 3.15.
 
-Run the sender on the same machine (`./Sender/build/fake_vrpn_uav_server`). Then start the bridge:
+## Usage (CLI reference)
+
+Flags:
+
+- `--tracker`: tracker name (`uav0`, …)
+- `--host`, `--port`: VRPN server location (IPv4 preferred; `localhost` is automatically mapped to `127.0.0.1`)
+- `--rate`: send frequency (Hz, default 50)
+- `--link`: `serial` (default) or `udp`
+- `--device`, `--baud`: serial configuration
+- `--udp-target`: `<host>:<port>`
+- `--sysid`, `--compid`: MAVLink IDs
+- `--log-poses`: print each forwarded pose to stdout (useful for debugging/log capture)
+
+### Example commands
+
+**Full serial pipeline (uses every serial-related arg)**
 
 ```bash
-python vrpn_to_mavlink_bridge.py \
-    uav0 127.0.0.1 /dev/tty.usbserial-0001 serial
+./build/vrpn_receiver \
+    --tracker uav5 \
+    --host 192.168.1.50 \
+    --port 4000 \
+    --rate 40 \
+    --link serial \
+    --device /dev/tty.usbmodem01 \
+    --baud 57600 \
+    --sysid 1 \
+    --compid 196 \
+    --log-poses
 ```
 
-UDP example for SITL / QGC on the same host:
+This connects to `uav5@192.168.1.50:4000`, forwards poses at 40 Hz over `/dev/tty.usbmodem01`, and tags each MAVLink packet with `(sysid=1, compid=196)` while echoing poses to stdout for inspection.
+
+**UDP bridge with custom IDs**
 
 ```bash
-python vrpn_to_mavlink_bridge.py \
-    uav0 127.0.0.1 udpout:127.0.0.1:14550 udp --no-heartbeat
+./build/vrpn_receiver \
+    --tracker uav0 \
+    --host 127.0.0.1 \
+    --port 3883 \
+    --rate 60 \
+    --link udp \
+    --udp-target 127.0.0.1:14550 \
+    --sysid 42 \
+    --compid 200 \
+    --log-poses
 ```
 
-Flags of interest:
+The above sends a 60 Hz stream to `udpout:127.0.0.1:14550` (ideal for QGC/SITL) while exercising every UDP option plus the diagnostic pose logging flag.
 
-- `--vrpn-port`: change VRPN port (default 3883)
-- `--publish-rate`: change the MAVLink send rate (default 50 Hz)
-- `--baud`: set serial baud rate (default 921600)
-- `--dry-run`: print VRPN poses without touching MAVLink
+### Which MAVLink interface is used?
+
+- **Serial/UART (default):** The tool writes MAVLink bytes directly to the device passed via `--device`. On macOS a PX4/ArduPilot board that is plugged in over USB typically appears as `/dev/tty.usbmodemXX` (CDC ACM) or `/dev/tty.usbserial-XXXX`. Hardware-wise, that port is bridged to the autopilot’s TELEM/COMPANION UART, so the FCU immediately consumes the `VISION_POSITION_ESTIMATE` stream just as if it came from any companion computer.
+- **UDP:** For SITL or desktop testing you can switch to `--link udp` and target `udpout:<ip>:<port>` (e.g. `127.0.0.1:14550` for QGroundControl). This does not require any physical wiring and is useful when no FCU is attached.
+
+- The bridge sends poses one-way; MAVLink acknowledgements are not required. Configure your autopilot to fuse external vision (for PX4 set `EKF2_AID_MASK` appropriately; for ArduPilot enable `VISUAL_POSITION` aids) and leave the bridge running so it continuously feeds poses over the telemetry port.
+
+Press `Ctrl+C` to exit.
