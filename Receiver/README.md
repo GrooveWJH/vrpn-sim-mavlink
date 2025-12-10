@@ -11,11 +11,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> The `vrpn` Python module is a thin wrapper over the VRPN C library. On macOS install VRPN via `brew install vrpn` before running `pip install vrpn`.
+> The `vrpn` Python module is a thin wrapper over the VRPN C library. Install the native library first (`brew install vrpn` on macOS, `sudo apt install libvrpn-dev` on Ubuntu/Debian) before running `pip install vrpn`.
 
 ## Usage
 
-Run the sender on the same Mac (`./Sender/build/fake_vrpn_uav_server`). Then start the bridge:
+Run the sender on the same machine (`./Sender/build/fake_vrpn_uav_server`). Then start the bridge:
 
 ```bash
 python vrpn_to_mavlink_bridge.py \

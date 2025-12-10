@@ -1,0 +1,33 @@
+# CMake build directories
+build/
+*/build/
+
+# General build artifacts
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+
+# macOS metadata
+.DS_Store
+
+# Python virtual environments / caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# VSCode / IDE metadata
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Generated coverage / testing data
+coverage/
+.coverage
+
+.cache/
