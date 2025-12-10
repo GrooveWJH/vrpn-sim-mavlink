@@ -11,6 +11,8 @@ Simulate a fleet of VRPN trackers on one computer (Sender) and forward individua
 └── Receiver   # C++ VRPN → MAVLink bridge (serial/UDP)
 ```
 
+> **Linux users**: switch to the `linux` branch before building. It carries Linuxbrew/Homebrew-specific tweaks so the Receiver picks up VRPN automatically.
+
 ## Prerequisites
 
 **macOS**
@@ -23,6 +25,15 @@ Simulate a fleet of VRPN trackers on one computer (Sender) and forward individua
 
 - Build toolchain: `sudo apt install build-essential cmake ninja-build`
 - VRPN development package: `sudo apt install libvrpn-dev`
+- If you prefer Linuxbrew/Homebrew, install VRPN there and expose the prefix so CMake can discover the headers/libs:
+
+  ```bash
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"  # adjust path to your brew
+  brew install vrpn
+  export HOMEBREW_PREFIX="$(brew --prefix)"
+  export VRPN_ROOT="$HOMEBREW_PREFIX"
+  export CMAKE_PREFIX_PATH="$HOMEBREW_PREFIX:$CMAKE_PREFIX_PATH"
+  ```
 - For other distros, install VRPN from source or the package manager and ensure headers/libs are visible to CMake.
 
 ## 1. Build & run the VRPN sender
