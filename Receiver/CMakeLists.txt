@@ -18,8 +18,24 @@ add_executable(vrpn_receiver
 target_include_directories(vrpn_receiver PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mavlink
+    ${VRPN_INCLUDE_DIR}
 )
 
 target_link_libraries(vrpn_receiver PRIVATE VRPN::vrpn)
+
+# Ensure vrpn_receiver can locate VRPN libs that live outside default linker paths.
+set(_vrpn_rpaths)
+foreach(_lib ${VRPN_vrpn_LIBRARY} ${VRPN_quat_LIBRARY})
+    if(_lib)
+        get_filename_component(_lib_dir "${_lib}" DIRECTORY)
+        list(APPEND _vrpn_rpaths "${_lib_dir}")
+    endif()
+endforeach()
+list(REMOVE_DUPLICATES _vrpn_rpaths)
+if(_vrpn_rpaths)
+    set_target_properties(vrpn_receiver PROPERTIES
+        BUILD_RPATH "${_vrpn_rpaths}"
+        INSTALL_RPATH "${_vrpn_rpaths}")
+endif()
 
 install(TARGETS vrpn_receiver RUNTIME DESTINATION bin)

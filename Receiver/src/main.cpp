@@ -1,6 +1,7 @@
 #include "receiver/MavlinkSender.h"
 #include "receiver/TrackerClient.h"
 
+#include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstring>
