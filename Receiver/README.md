@@ -30,6 +30,20 @@ Flags:
 
 ### Example commands
 
+如果你只想验证某个 Tracker 是否能在终端持续收到，最小监视器已经独立到了仓库根目录的 `minimal_receiver/`。它提供单独的 `CMakeLists.txt`、独立 `README.md` 和更精简的 `vrpn_pose_monitor` 可执行文件。
+
+进入独立目录后可直接运行：
+
+```bash
+cd ../minimal_receiver
+cmake -B build -S .
+cmake --build build
+./build/vrpn_pose_monitor \
+    --tracker sunraynext_uav0 \
+    --host 192.168.10.32 \
+    --port 3883
+```
+
 **Full serial pipeline (uses every serial-related arg)**
 
 ```bash
