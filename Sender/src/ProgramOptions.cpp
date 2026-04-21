@@ -28,20 +28,21 @@ void print_help(const char* exe) {
     std::printf("  -b, --bind <addr>          VRPN bind string (default :3883)\n");
     std::printf("  -n, --num-trackers <N>     Number of trackers to simulate (default 32)\n");
     std::printf("  -r, --rate <Hz>            Publish rate (default 50Hz)\n");
+    std::printf("      --tracker-prefix <s>   Tracker name prefix (default uav => uav0, uav1...)\n");
+    std::printf("      --random-walk          Use bounded random XY motion instead of deterministic circle\n");
+    std::printf("      --random-radius <m>    Radius limit for random walk (default 1.0m)\n");
     std::printf("  -q, --quiet                Suppress periodic status output\n");
     std::printf("      --status-interval <s>  Seconds between status logs (default 5)\n");
-    std::printf(
-        "      --status-mode <mode>   'append' (default) or 'inline' reuse one terminal line\n");
+    std::printf("      --status-mode <mode>   'append' (default) or 'inline' reuse one terminal line\n");
     std::printf("      --status-pose          Append pose/quaternion data to status logs (default)\n");
     std::printf("      --status-no-pose       Suppress pose/quaternion data in status logs\n");
-    std::printf(
-        "      --status-tracker <id>  Tracker index used for status pose output (default 0)\n");
+    std::printf("      --status-tracker <id>  Tracker index used for status pose output (default 0)\n");
     std::printf("      --auto-restart         Retry binding after errors (default: disabled)\n");
     std::printf("      --restart-delay <s>    Delay before auto-restart (default 1s)\n");
     std::printf("\nExamples:\n");
     std::printf("  %s --bind :3883 --num-trackers 32 --rate 50\n", prog);
+    std::printf("  %s --bind :3883 --num-trackers 1 --tracker-prefix sunraynext_uav --rate 120 --random-walk --random-radius 1.0\n", prog);
     std::printf("  %s --bind :4000 --auto-restart --restart-delay 2.0\n", prog);
-    std::printf("  %s --bind :3883 -q --status-interval 10 --status-mode inline\n", prog);
 }
 
 }  // namespace
@@ -52,12 +53,16 @@ ProgramOptions parse_args(int argc, char** argv) {
         const char* arg = argv[i];
         if ((std::strcmp(arg, "-b") == 0 || std::strcmp(arg, "--bind") == 0) && i + 1 < argc) {
             opts.bind_address = argv[++i];
-        } else if ((std::strcmp(arg, "-n") == 0 || std::strcmp(arg, "--num-trackers") == 0) &&
-                   i + 1 < argc) {
+        } else if ((std::strcmp(arg, "-n") == 0 || std::strcmp(arg, "--num-trackers") == 0) && i + 1 < argc) {
             opts.tracker_count = std::atoi(argv[++i]);
-        } else if ((std::strcmp(arg, "-r") == 0 || std::strcmp(arg, "--rate") == 0) &&
-                   i + 1 < argc) {
+        } else if ((std::strcmp(arg, "-r") == 0 || std::strcmp(arg, "--rate") == 0) && i + 1 < argc) {
             opts.publish_rate_hz = std::atof(argv[++i]);
+        } else if (std::strcmp(arg, "--tracker-prefix") == 0 && i + 1 < argc) {
+            opts.tracker_prefix = argv[++i];
+        } else if (std::strcmp(arg, "--random-walk") == 0) {
+            opts.random_walk = true;
+        } else if (std::strcmp(arg, "--random-radius") == 0 && i + 1 < argc) {
+            opts.random_radius_m = std::atof(argv[++i]);
         } else if (std::strcmp(arg, "-q") == 0 || std::strcmp(arg, "--quiet") == 0) {
             opts.quiet = true;
         } else if (std::strcmp(arg, "--status-interval") == 0 && i + 1 < argc) {

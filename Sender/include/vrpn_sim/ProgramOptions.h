@@ -15,6 +15,9 @@ struct ProgramOptions {
     bool status_single_line  = false;
     bool status_include_pose = true;
     int status_pose_tracker  = 0;
+    std::string tracker_prefix = "uav";
+    bool random_walk = false;
+    double random_radius_m = 1.0;
 };
 
 ProgramOptions parse_args(int argc, char** argv);
